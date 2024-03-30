@@ -53,7 +53,49 @@ if [ ! ${nic} ] || [ ${nic} == null ]; then
         echo -e "${RED}Check your API token and connectivity to ${ENDPOINT}${NC}"
     fi
     exit 1
-else
-    echo -e "${GREEN}Api communication is OK \nYour nic is : ${nic}${NC}"
 fi
 
+# Test if parameter is present
+srv=${1}
+if [ ! ${srv} ]
+then
+    echo -e "${RED} Server parameter is missing${NC}"
+    echo -e "${RED} Usage : script.sh "server name"${NC}"
+    exit 1
+fi
+
+# Test if server exists
+srvid=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .serverId)
+re='^[0-9]+$'
+if ! [[ ${srvid} =~ $re ]] ; then
+    echo -e "${RED}Server does not exit${NC}"
+    echo "${srvid}" | jq .
+    exit 1
+fi
+
+srvpowerstate=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .powerState)
+echo -e "${GREEN}Server ${srv} is actually ${srvpowerstate}${NC}"
+if [ "${srvpowerstate}" = "poweroff" ]
+then
+    echo -e "${GREEN}Nothing to do, server ${srv} is already shutdown${NC}"
+    exit 0
+fi
+echo -e "${RED}WARNING Server ${srv} will be shutdown, CTRL+C to interrup the script${NC}"
+sleep 5
+# Get bootId "power"
+bootid=$(CURL GET "/1.0/dedicated/server/${srv}/boot?bootType=power" | jq .[])
+echo -e "${GREEN}Power bootid is ${bootid}${NC}"
+# set "power" bootId
+echo -e "${GREEN}Setting IPXE bootId ${bootid} for server ${srv}${NC}"
+setshutdownbootid=$(CURL PUT "/1.0/dedicated/server/${srv}" "{\"bootId\": ${bootid}, \"monitoring\": false, \"noIntervention\": false}")
+echo -e "${GREEN}Rebooting server ${srv}${NC}"
+CURL POST "/1.0/dedicated/server/$srv/reboot" ""
+srvpowerstate=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .powerState)
+while [ "${srvpowerstate}" != "poweroff" ]
+do
+    echo -e "${BYellow}Waiting for server ${srv} to be shutdown, actual state : ${srvpowerstate}${NC}"
+    sleep 10
+    srvpowerstate=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .powerState)
+done
+echo -e "${GREEN}Server ${srv} is n state ${srvpowerstate}${NC}"
+exit 0

@@ -20,6 +20,16 @@ Documentation avalaible here : https://help.ovhcloud.com/csm/en-ca-api-getting-s
 
 https://api.us.ovhcloud.com/createToken/ for US
 
-Once generated use secret.cfg.template[REGION] to save your acces token and save to secret.cfg.
+Once generated use secret.cfg.template[REGION] to save your acces token and save file to secret.cfg.
 
 # Test your Token
+use checkapi script.
+```bash
+./checkapi.sh
+```
+# Shutdown a server
+use shutdownserver script.
+```bash
+./shutdownserver.sh <server name>
+```
+

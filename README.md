@@ -36,9 +36,22 @@ Use shutdownserver script.
 ./shutdownserver.sh <server name>
 ```
 # Boot server on Hard Drive
-Use bootserveronhdd script
+Use bootserveronhdd script.
+WARNING : server will reboot
 
 ```bash
 bootserveronhdd.sh <server name>
 ```
+# Get cluster details
+Use getnutanixclusterdetails script
 
+```bash
+./getnutanixclusterdetails.sh <cluster name>
+```
+You can also "pipe" with jq to fetch specific parameter
+
+Cluster parameters 
+
+```bash
+./getnutanixclusterdetails.sh <cluster name> | jq .targetSpec
+```

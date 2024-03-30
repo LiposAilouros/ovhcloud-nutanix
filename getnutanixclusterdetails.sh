@@ -56,35 +56,13 @@ if [ ! ${nic} ] || [ ${nic} == null ]; then
 fi
 
 # Test if parameter is present
-srv=${1}
-if [ ! ${srv} ]
+cluster=${1}
+if [ ! ${cluster} ]
 then
-    echo -e "${RED} Server parameter is missing${NC}"
-    echo -e "${RED} Usage : script.sh "server name"${NC}"
+    echo -e "${RED} cluster parameter is missing${NC}"
+    echo -e "${RED} Usage : script.sh "cluster name"${NC}"
     exit 1
 fi
 
-# Test if server exists
-srvid=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .serverId)
-re='^[0-9]+$'
-if ! [[ ${srvid} =~ $re ]] ; then
-    echo -e "${RED}Server does not exit${NC}"
-    echo "${srvid}" | jq .
-    exit 1
-fi
-
-bootid=1
-echo -e "${GREEN}Setting BooId to HDD${NC}"
-setshutdownbootid=$(CURL PUT "/1.0/dedicated/server/${srv}" "{\"bootId\": ${bootid}, \"monitoring\": false, \"noIntervention\": false}")
-echo "$setshutdownbootid"
-CURL POST "/1.0/dedicated/server/$srv/reboot" ""
-srvpowerstate=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .powerState)
-while [ "${srvpowerstate}" != "poweron" ]
-do
-    echo -e "${BYellow}Waiting for server ${srv} boot${NC}"
-    sleep 10
-    srvpowerstate=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .powerState)
-done
-
-echo -e "${GREEN}Server ${srv} is in state ${srvpowerstate}${NC}"
+CURL GET "/1.0/nutanix/${cluster}" | jq .
 exit 0

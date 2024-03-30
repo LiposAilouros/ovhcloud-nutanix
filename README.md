@@ -3,10 +3,12 @@ Some tools in order to manage nutanix cluster on OVHcloud.
 
 # Disclaimer
 This bash tools are personal.
+
 Use it in lab, fork, customize and enjoy.
 
 # Used configuration 
 Script are used on MacOS and Ubuntu.
+
 IMPORTANT : you need to install JQ https://jqlang.github.io/jq/ (1.6 on my Ubuntu laptop as I'm writing this file)
 
 # Generate Token for OVHcloud API
@@ -28,8 +30,15 @@ use checkapi script.
 ./checkapi.sh
 ```
 # Shutdown a server
-use shutdownserver script.
+This script will be used for scale down a cluster, you need first to shutdown the server to remove.
+Use shutdownserver script.
 ```bash
 ./shutdownserver.sh <server name>
+```
+# Boot server on Hard Drive
+Use bootserveronhdd script
+
+```bash
+bootserveronhdd.sh <server name>
 ```
 

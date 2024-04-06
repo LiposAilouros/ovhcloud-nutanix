@@ -59,3 +59,15 @@ Cluster parameters
 ```bash
 ./getnutanixclusterdetails.sh <cluster name> | jq .targetSpec
 ```
+
+## Order new node
+
+Order a new server for your cluster.
+Server will be the same as the first in the cluster, same reference.
+You could set ram parameter in the script to change quantity of ram.
+Don't change "quantity parameter" => there is some dev in progress in OVHcloud side.
+
+For now you can only order in FR, US, CA.
+
+## Scale up 
+Work in progress

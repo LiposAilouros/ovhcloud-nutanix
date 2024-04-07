@@ -73,6 +73,13 @@ cvmIp="172.16.1.40"
 ahvIp="172.16.0.40"
 version="6.5"
 
+# check if there is a node unconfigured ie : cvmIp = 0.0.0.0
+unconfiguredcvmnumber=$(CURL GET "/1.0/nutanix/${cluster}" | jq -r '.targetSpec.nodes[]'.cvmIp | grep 0.0.0.0 | wc -l)
+if [ "${unconfiguredcvmnumber}" -le "0" ]; then
+    echo -e "${RED}There is no node to configure${NC}"
+    exit 1
+fi
+
 # check if ips are in the same subnet as cluster
 gatewaycidr=$(CURL GET "/1.0/nutanix/${cluster}" | jq -r '.targetSpec.gatewayCidr')
 clustermask=$(ipcalc -b 172.16.3.254/22 | grep 'Netmask' | cut -f 4 -d ' ')

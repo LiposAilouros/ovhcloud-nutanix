@@ -24,7 +24,7 @@ https://ca.api.ovh.com/createToken/ for CA
 
 Documentation avalaible here : https://help.ovhcloud.com/csm/en-ca-api-getting-started-ovhcloud-api?id=kb_article_view&sysparm_article=KB0029722#advanced-usage-pair-ovhcloud-apis-with-an-application
 
-https://api.us.ovhcloud.com/createToken/ for US
+https://us.ovhcloud.com/auth/api/createToken for US
 
 Once generated use secret.cfg.template[REGION] to save your acces token and save file to secret.cfg.
 
@@ -65,9 +65,12 @@ Cluster parameters
 Order a new server for your cluster.
 Server will be the same as the first in the cluster, same reference.
 You could set ram parameter in the script to change quantity of ram.
-Don't change "quantity parameter" => there is some dev in progress in OVHcloud side.
+Don't change "quantity parameter" => there is some dev in progress on OVHcloud side.
 
 For now you can only order in FR, US, CA.
 
 ## Scale up 
 Work in progress
+For now you can only scale up one node. If you hae more than one node and you want to use this script, you must wait that the first node have been deployed before sacle up again.
+
+Multi scale up is allowed on OVHcloud side but not implemented.

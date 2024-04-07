@@ -67,6 +67,7 @@ fi
 # Todo :    define ip pool for ahv and cvm 
 #           check if there is one or more server to scale up 
 #           checks ips and get ips in ip pools
+#           check cluster state if "Deploying state exit
 
 
 cvmIp="172.16.1.40"

@@ -38,6 +38,7 @@ getIPMIAccessUrl() {
     if [ ${url} == "null" ]; then
         echo -e "${RED}${fnret}${NC}"
     else
+	echo -e "${GREEN}You can follow the process by accesing the KVM${NC}"
         echo -e "\n${GREEN}KVM URL :${NC} ${RED}$url\n${NC}"
     fi
 }
@@ -106,6 +107,7 @@ if ! [[ ${srvid} =~ $re ]] ; then
 fi
 
 requestIPMIAccess
+
 getIPMIAccessUrl
 
 srvpowerstate=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .powerState)

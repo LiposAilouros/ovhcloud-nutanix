@@ -1,5 +1,5 @@
 #!/bin/bash                                                                                                                                                                                                                                                           
-#set -eux
+#set -eux # Debug purpose
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 GREEN='\033[0;32m'        # Green
@@ -7,23 +7,55 @@ BYellow='\033[1;33m'      # Bold Yellow
 set -o pipefail
 
 CURL() {
-    METHOD=$1
-    QUERY=${ENDPOINT}$2
+    payload=(${@})
+    METHOD=${payload[0]}
+    QUERY=${ENDPOINT}${payload[1]}
     TSTAMP=$(date +%s)
-    if [ $METHOD == "GET" ] || [ $METHOD == "DELETE" ]
-        then
-            BODY=""
-            SHA=$(echo -n $AS+$CK+$METHOD+$QUERY+$BODY+$TSTAMP | shasum | cut -d ' ' -f 1)
-            SIGNATURE="\$1\$$SHA"
-            fnret=$(curl -s -X $METHOD -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $SIGNATURE" -H "X-Ovh-Timestamp: $TSTAMP" $QUERY)
-            echo ${fnret} | jq .
-        else
-            BODY=$3
-            SHA=$(echo -n $AS+$CK+$METHOD+$QUERY+$BODY+$TSTAMP | shasum | cut -d ' ' -f 1)
-            SIGNATURE="\$1\$$SHA"
-            fnret=$(curl -s -X $METHOD -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $SIGNATURE" -H "X-Ovh-Timestamp: $TSTAMP" "${QUERY}" --data "${BODY}")
-            echo ${fnret} | jq .
+    BODY=""
+    if [ $METHOD != 'GET' ] || [ $METHOD != 'DELETE' ]
+    then
+        BODY="${payload[@]:2}"
     fi
+    SHA=$(echo -n $AS+$CK+$METHOD+$QUERY+$BODY+$TSTAMP | shasum | cut -d ' ' -f 1)
+    SIGNATURE="\$1\$$SHA"
+    fnret=$(curl -s -X $METHOD -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $SIGNATURE" -H "X-Ovh-Timestamp: $TSTAMP" "${QUERY}" --data "${BODY}")
+    echo ${fnret} | jq .
+}
+
+
+requestIPMIAccess() {
+    publicip=$(curl -4sS ifconfig.ovh)
+    echo -e "${GREEN}Requesting IPMI access for ${publicip}\n${NC}"
+    CURL 'POST' "/1.0/dedicated/server/${srv}/features/ipmi/access" "{\"ipToAllow\": \"${publicip}\",\"ttl\": \"5\",\"type\": \"kvmipHtml5URL\"}"
+    echo "$fnret" | jq .
+    sleep 10
+    waitingForTask
+}
+
+getIPMIAccessUrl() {
+    CURL 'GET' "/1.0/dedicated/server/${srv}/features/ipmi/access?type=kvmipHtml5URL"
+    url=$(echo ${fnret} | jq -r .value)
+    if [ ${url} == "null" ]; then
+        echo -e "${RED}${fnret}${NC}"
+    else
+        echo -e "\n${GREEN}KVM URL :${NC} ${RED}$url\n${NC}"
+    fi
+}
+
+waitingForTask() {
+    taskstatus=""
+    until [ "${taskstatus}" = "done" ]; do
+        taskId=$(echo "$fnret" | jq -r .taskId)
+        if [ ${taskId} == "null" ]; then
+            echo -e "${RED}Something went wrong${NC}"
+            exit 1
+        fi
+        CURL 'GET' "/1.0/dedicated/server/${srv}/task/$taskId"
+        taskstatus=$(echo "$fnret" | jq -r .status)
+        function=$(echo "$fnret" | jq -r .function)
+        echo -e "${GREEN}Waiting for task ${function} completion${NC}"
+        sleep 10
+    done
 }
 
 # Checking token file
@@ -72,6 +104,9 @@ if ! [[ ${srvid} =~ $re ]] ; then
     echo "${srvid}" | jq .
     exit 1
 fi
+
+requestIPMIAccess
+getIPMIAccessUrl
 
 srvpowerstate=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .powerState)
 echo -e "${GREEN}Server ${srv} is actually ${srvpowerstate}${NC}"

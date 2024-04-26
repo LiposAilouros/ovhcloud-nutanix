@@ -7,23 +7,19 @@ BYellow='\033[1;33m'      # Bold Yellow
 set -o pipefail
 
 CURL() {
-    METHOD=$1
-    QUERY=${ENDPOINT}$2
+    payload=(${@})
+    METHOD=${payload[0]}
+    QUERY=${ENDPOINT}${payload[1]}
     TSTAMP=$(date +%s)
-    if [ $METHOD == "GET" ] || [ $METHOD == "DELETE" ]
-        then
-            BODY=""
-            SHA=$(echo -n $AS+$CK+$METHOD+$QUERY+$BODY+$TSTAMP | shasum | cut -d ' ' -f 1)
-            SIGNATURE="\$1\$$SHA"
-            fnret=$(curl -s -X $METHOD -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $SIGNATURE" -H "X-Ovh-Timestamp: $TSTAMP" $QUERY)
-            echo ${fnret} | jq .
-        else
-            BODY=$3
-            SHA=$(echo -n $AS+$CK+$METHOD+$QUERY+$BODY+$TSTAMP | shasum | cut -d ' ' -f 1)
-            SIGNATURE="\$1\$$SHA"
-            fnret=$(curl -s -X $METHOD -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $SIGNATURE" -H "X-Ovh-Timestamp: $TSTAMP" "${QUERY}" --data "${BODY}")
-            echo ${fnret} | jq .
+    BODY=""
+    if [ $METHOD != 'GET' ] || [ $METHOD != 'DELETE' ]
+    then
+        BODY="${payload[@]:2}"
     fi
+    SHA=$(echo -n $AS+$CK+$METHOD+$QUERY+$BODY+$TSTAMP | shasum | cut -d ' ' -f 1)
+    SIGNATURE="\$1\$$SHA"
+    fnret=$(curl -s -X $METHOD -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $SIGNATURE" -H "X-Ovh-Timestamp: $TSTAMP" "${QUERY}" --data "${BODY}")
+    echo ${fnret} | jq .
 }
 
 # Checking token file

@@ -6,18 +6,19 @@ GREEN='\033[0;32m'        # Green
 BYellow='\033[1;33m'      # Bold Yellow
 set -o pipefail
 
+
 CURL() {
     METHOD=$1
     QUERY=${ENDPOINT}$2
     TSTAMP=$(date +%s)
     if [ $METHOD == "GET" ] || [ $METHOD == "DELETE" ]
-        then 
+        then
             BODY=""
             SHA=$(echo -n $AS+$CK+$METHOD+$QUERY+$BODY+$TSTAMP | shasum | cut -d ' ' -f 1)
             SIGNATURE="\$1\$$SHA"
             fnret=$(curl -s -X $METHOD -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $SIGNATURE" -H "X-Ovh-Timestamp: $TSTAMP" $QUERY)
             echo ${fnret} | jq .
-        else 
+        else
             BODY=$3
             SHA=$(echo -n $AS+$CK+$METHOD+$QUERY+$BODY+$TSTAMP | shasum | cut -d ' ' -f 1)
             SIGNATURE="\$1\$$SHA"
@@ -25,6 +26,7 @@ CURL() {
             echo ${fnret} | jq .
     fi
 }
+
 
 # Checking script usage
 if [ ! ${1} ]; then
@@ -73,7 +75,7 @@ if [ "${ENDPOINT}" == "https://ca.api.ovh.com" ]; then
 fi
 
 ram= # OPTIONAL, Possible value  "1536g",  "384g", "768g", 192g
-quantity=1
+quantity=1 # Do not change until OVHcloud fixes issue
 echo -e "${GREEN}Creating Cartid${NC}"
 cartId=$(curl -sS "${ENDPOINT}/1.0/order/cart" --compressed -X POST -H 'Accept: application/json' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br' -H 'Content-Type: application/json;charset=utf-8' -H 'Connection: keep-alive' -H 'Referer: https://api.us.ovhcloud.com/console/' --data-raw "{\"ovhSubsidiary\":\"${ovhSubsidiary}\"}" | jq -r .cartId)
 echo -e "${GREEN}Cartid :  ${cartId}\n${NC}"

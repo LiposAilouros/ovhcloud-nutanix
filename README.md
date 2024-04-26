@@ -47,7 +47,7 @@ WARNING : server will reboot
 ./bootserveronhdd.sh <server name>
 ```
 ## Get cluster details
-Use getnutanixclusterdetails script
+Use getnutanixclusterdetails script to view details about a cluster
 
 ```bash
 ./getnutanixclusterdetails.sh <cluster name>
@@ -68,6 +68,11 @@ You could set ram parameter in the script to change quantity of ram.
 Don't change "quantity parameter" => there is some dev in progress on OVHcloud side.
 
 For now you can only order in FR, US, CA.
+
+```bash
+./orderscaleupserver.sh <cluster name>
+```
+
 
 ## Scale up 
 Work in progress

@@ -6,22 +6,20 @@ GREEN='\033[0;32m'        # Green
 BYellow='\033[1;33m'      # Bold Yellow
 set -o pipefail
 
-CURL() {
-    payload=(${@})
-    METHOD=${payload[0]}
-    QUERY=${ENDPOINT}${payload[1]}
-    TSTAMP=$(date +%s)
-    BODY=""
-    if [ $METHOD != 'GET' ] || [ $METHOD != 'DELETE' ]
+ovhapirequest() {
+    # curl ovhapi
+    eval ${@}
+    query=${ENDPOINT}${query}
+    tstamp=$(date +%s)
+    if [ "${method}" == 'GET' ] || [ "${method}" == 'DELETE' ]
     then
-        BODY="${payload[@]:2}"
+        body=""
     fi
-    SHA=$(echo -n $AS+$CK+$METHOD+$QUERY+$BODY+$TSTAMP | shasum | cut -d ' ' -f 1)
-    SIGNATURE="\$1\$$SHA"
-    fnret=$(curl -s -X $METHOD -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $SIGNATURE" -H "X-Ovh-Timestamp: $TSTAMP" "${QUERY}" --data "${BODY}")
+    sha=$(echo -n $AS+$CK+${method}+${query}+${body}+${tstamp} | shasum | cut -d ' ' -f 1)
+    signature="\$1\$$sha"
+    fnret=$(curl -s -X $method -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $signature" -H "X-Ovh-Timestamp: $tstamp" "${query}" --data "${body}")
     echo ${fnret} | jq .
 }
-
 
 # Checking token file
 if [ ! -f "$(pwd)/secret.cfg" ]; then
@@ -39,7 +37,7 @@ fi
 source $(pwd)/secret.cfg
 
 # Checking Token
-nic=$(CURL GET "/1.0/me" | jq -r .nichandle)
+nic=$(ovhapirequest method='GET' query='/1.0/me' | jq -r .nichandle)
 if [ ! ${nic} ] || [ ${nic} == null ]; then
     echo -e "${RED}Unable to fetch your nichandle${NC}"
     if [ ! ${AK} ] || [ ! ${CK} ] || [ ! ${ENDPOINT} ] || [ ! ${AS} ]; then
@@ -62,7 +60,7 @@ then
 fi
 
 # Test if server exists
-srvid=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .serverId)
+srvid=$(ovhapirequest method='GET' query='/1.0/dedicated/server/${srv}' | jq -r .serverId)
 re='^[0-9]+$'
 if ! [[ ${srvid} =~ $re ]] ; then
     echo -e "${RED}Server does not exit${NC}"
@@ -70,17 +68,19 @@ if ! [[ ${srvid} =~ $re ]] ; then
     exit 1
 fi
 
+#-----------------main--------------
+
 bootid=1
 echo -e "${GREEN}Setting BooId to HDD${NC}"
-setshutdownbootid=$(CURL PUT "/1.0/dedicated/server/${srv}" "{\"bootId\": ${bootid}, \"monitoring\": false, \"noIntervention\": false}")
+setshutdownbootid=$(ovhapirequest method='PUT' query='/1.0/dedicated/server/${srv}' body='{\"bootId\":\"${bootid}\",\"monitoring\":false,\"noIntervention\":false}')
 echo "$setshutdownbootid"
-CURL POST "/1.0/dedicated/server/$srv/reboot" ""
-srvpowerstate=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .powerState)
+ovhapirequest method='POST' query='/1.0/dedicated/server/$srv/reboot'
+srvpowerstate=$(method='GET' query='/1.0/dedicated/server/${srv}' | jq -r .powerState)
 while [ "${srvpowerstate}" != "poweron" ]
 do
     echo -e "${BYellow}Waiting for server ${srv} hard Reboot task to be completed${NC}"
     sleep 10
-    srvpowerstate=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .powerState)
+    srvpowerstate=$(method='GET' query='/1.0/dedicated/server/${srv}' | jq -r .powerState)
 done
 
 echo -e "${GREEN}Server ${srv} is in state ${srvpowerstate}${NC}"

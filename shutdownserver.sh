@@ -32,7 +32,6 @@ requestIPMIAccess() {
 
 getIPMIAccessUrl() {
     ovhapirequest method='GET' query='/1.0/dedicated/server/${srv}/features/ipmi/access?type=kvmipHtml5URL'
-    #CURL 'GET' "/1.0/dedicated/server/${srv}/features/ipmi/access?type=kvmipHtml5URL"
     url=$(echo ${fnret} | jq -r .value)
     if [ ${url} == "null" ]; then
         echo -e "${RED}${fnret}${NC}"
@@ -51,7 +50,6 @@ waitingForTask() {
             exit 1
         fi
         ovhapirequest method='GET' query='/1.0/dedicated/server/${srv}/task/$taskId'
-        #CURL 'GET' "/1.0/dedicated/server/${srv}/task/$taskId"
         taskstatus=$(echo "$fnret" | jq -r .status)
         function=$(echo "$fnret" | jq -r .function)
         echo -e "${GREEN}Waiting for task ${function} completion${NC}"
@@ -75,7 +73,6 @@ fi
 source $(pwd)/secret.cfg
 
 # Checking Token
-#nic=$(CURL GET "/1.0/me" | jq -r .nichandle)
 nic=$(ovhapirequest method='GET' query='/1.0/me' | jq -r .nichandle)
 if [ ! ${nic} ] || [ ${nic} == null ]; then
     echo -e "${RED}Unable to fetch your nichandle${NC}"

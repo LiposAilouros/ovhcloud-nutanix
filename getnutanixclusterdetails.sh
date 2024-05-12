@@ -6,19 +6,18 @@ GREEN='\033[0;32m'        # Green
 BYellow='\033[1;33m'      # Bold Yellow
 set -o pipefail
 
-CURL() {
-    payload=(${@})
-    METHOD=${payload[0]}
-    QUERY=${ENDPOINT}${payload[1]}
-    TSTAMP=$(date +%s)
-    BODY=""
-    if [ $METHOD != 'GET' ] || [ $METHOD != 'DELETE' ]
+ovhapirequest() {
+    # curl ovhapi
+    eval ${@}
+    query=${ENDPOINT}${query}
+    tstamp=$(date +%s)
+    if [ "${method}" == 'GET' ] || [ "${method}" == 'DELETE' ]
     then
-        BODY="${payload[@]:2}"
+        body=""
     fi
-    SHA=$(echo -n $AS+$CK+$METHOD+$QUERY+$BODY+$TSTAMP | shasum | cut -d ' ' -f 1)
-    SIGNATURE="\$1\$$SHA"
-    fnret=$(curl -s -X $METHOD -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $SIGNATURE" -H "X-Ovh-Timestamp: $TSTAMP" "${QUERY}" --data "${BODY}")
+    sha=$(echo -n $AS+$CK+${method}+${query}+${body}+${tstamp} | shasum | cut -d ' ' -f 1)
+    signature="\$1\$$sha"
+    fnret=$(curl -s -X $method -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $signature" -H "X-Ovh-Timestamp: $tstamp" "${query}" --data "${body}")
     echo ${fnret} | jq .
 }
 
@@ -38,7 +37,7 @@ fi
 source $(pwd)/secret.cfg
 
 # Checking Token
-nic=$(CURL GET "/1.0/me" | jq -r .nichandle)
+nic=$(ovhapirequest method='GET' query='/1.0/me' | jq -r .nichandle)
 if [ ! ${nic} ] || [ ${nic} == null ]; then
     echo -e "${RED}Unable to fetch your nichandle${NC}"
     if [ ! ${AK} ] || [ ! ${CK} ] || [ ! ${ENDPOINT} ] || [ ! ${AS} ]; then
@@ -60,5 +59,5 @@ then
     exit 1
 fi
 
-CURL GET "/1.0/nutanix/${cluster}" | jq .
+ovhapirequest method='GET' query='/1.0/nutanix/${cluster}' | jq .
 exit 0

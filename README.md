@@ -75,7 +75,19 @@ For now you can only order in FR, US, CA.
 
 
 ## Scale up 
+
 Work in progress
-For now you can only scale up one node. If you hae more than one node and you want to use this script, you must wait that the first node have been deployed before sacle up again.
+For now you can only scale up one node. If you have more than one node and you want to use this script, you must wait that the first node have been deployed before sacle up again.
 
 Multi scale up is allowed on OVHcloud side but not implemented.
+
+## Interconnect clusters
+
+This script interconnect two Nutanix clusters Provided by OVHcloud across the same vRack.
+Vrack are cross datacenters, please check documentation and availability https://www.ovhcloud.com/en-ie/network/vrack/
+
+```bash
+./interconnectvrackclusters.sh clusterdestination='cluster-xxxx.nutanix.ovh.xx' clusterdestinationpassword='12345' clustersource='cluster-xxxx.nutanix.ovh.xx' clustersourcepassword='P@55w0rd'
+```
+
+

@@ -6,6 +6,21 @@ GREEN='\033[0;32m'        # Green
 BYellow='\033[1;33m'      # Bold Yellow
 set -o pipefail
 
+ovhapirequest() {
+    # curl ovhapi
+    eval ${@}
+    query=${ENDPOINT}${query}
+    tstamp=$(date +%s)
+    if [ "${method}" == 'GET' ] || [ "${method}" == 'DELETE' ]
+    then
+        body=""
+    fi
+    sha=$(echo -n $AS+$CK+${method}+${query}+${body}+${tstamp} | shasum | cut -d ' ' -f 1)
+    signature="\$1\$$sha"
+    fnret=$(curl -s -X $method -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $signature" -H "X-Ovh-Timestamp: $tstamp" "${query}" --data "${body}")
+    echo ${fnret} | jq .
+}
+
 CURL() {
     payload=(${@})
     METHOD=${payload[0]}
@@ -38,7 +53,7 @@ fi
 source $(pwd)/secret.cfg
 
 # Checking Token
-nic=$(CURL GET "/1.0/me" | jq -r .nichandle)
+nic=$(ovhapirequest method='GET' query='/1.0/me' | jq -r .nichandle)
 if [ ! ${nic} ] || [ ${nic} == null ]; then
     echo -e "${RED}Unable to fetch your nichandle${NC}"
     if [ ! ${AK} ] || [ ! ${CK} ] || [ ! ${ENDPOINT} ] || [ ! ${AS} ]; then

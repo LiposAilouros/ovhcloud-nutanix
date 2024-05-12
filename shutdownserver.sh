@@ -6,34 +6,33 @@ GREEN='\033[0;32m'        # Green
 BYellow='\033[1;33m'      # Bold Yellow
 set -o pipefail
 
-CURL() {
-    payload=(${@})
-    METHOD=${payload[0]}
-    QUERY=${ENDPOINT}${payload[1]}
-    TSTAMP=$(date +%s)
-    BODY=""
-    if [ $METHOD != 'GET' ] || [ $METHOD != 'DELETE' ]
+ovhapirequest() {                                                                                                                                                               
+    # curl ovhapi 
+    eval ${@}
+    query=${ENDPOINT}${query}
+    tstamp=$(date +%s)
+    if [ "${method}" == 'GET' ] || [ "${method}" == 'DELETE' ]
     then
-        BODY="${payload[@]:2}"
+        body=""
     fi
-    SHA=$(echo -n $AS+$CK+$METHOD+$QUERY+$BODY+$TSTAMP | shasum | cut -d ' ' -f 1)
-    SIGNATURE="\$1\$$SHA"
-    fnret=$(curl -s -X $METHOD -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $SIGNATURE" -H "X-Ovh-Timestamp: $TSTAMP" "${QUERY}" --data "${BODY}")
+    sha=$(echo -n $AS+$CK+${method}+${query}+${body}+${tstamp} | shasum | cut -d ' ' -f 1)
+    signature="\$1\$$sha"
+    fnret=$(curl -s -X $method -H "Content-type: application/json" -H "X-Ovh-Application: $AK" -H "X-Ovh-Consumer: $CK" -H "X-Ovh-Signature: $signature" -H "X-Ovh-Timestamp: $tstamp" "${query}" --data "${body}")
     echo ${fnret} | jq .
 }
-
 
 requestIPMIAccess() {
     publicip=$(curl -4sS ifconfig.ovh)
     echo -e "${GREEN}Requesting IPMI access for ${publicip}\n${NC}"
-    CURL 'POST' "/1.0/dedicated/server/${srv}/features/ipmi/access" "{\"ipToAllow\": \"${publicip}\",\"ttl\": \"5\",\"type\": \"kvmipHtml5URL\"}"
+    ovhapirequest method='POST' query='/1.0/dedicated/server/${srv}/features/ipmi/access' body='{\"ipToAllow\":\"${publicip}\",\"ttl\":\"5\",\"type\":\"kvmipHtml5URL\"}'
     echo "$fnret" | jq .
     sleep 10
     waitingForTask
 }
 
 getIPMIAccessUrl() {
-    CURL 'GET' "/1.0/dedicated/server/${srv}/features/ipmi/access?type=kvmipHtml5URL"
+    ovhapirequest method='GET' query='/1.0/dedicated/server/${srv}/features/ipmi/access?type=kvmipHtml5URL'
+    #CURL 'GET' "/1.0/dedicated/server/${srv}/features/ipmi/access?type=kvmipHtml5URL"
     url=$(echo ${fnret} | jq -r .value)
     if [ ${url} == "null" ]; then
         echo -e "${RED}${fnret}${NC}"
@@ -51,7 +50,8 @@ waitingForTask() {
             echo -e "${RED}Something went wrong${NC}"
             exit 1
         fi
-        CURL 'GET' "/1.0/dedicated/server/${srv}/task/$taskId"
+        ovhapirequest method='GET' query='/1.0/dedicated/server/${srv}/task/$taskId'
+        #CURL 'GET' "/1.0/dedicated/server/${srv}/task/$taskId"
         taskstatus=$(echo "$fnret" | jq -r .status)
         function=$(echo "$fnret" | jq -r .function)
         echo -e "${GREEN}Waiting for task ${function} completion${NC}"
@@ -75,7 +75,8 @@ fi
 source $(pwd)/secret.cfg
 
 # Checking Token
-nic=$(CURL GET "/1.0/me" | jq -r .nichandle)
+#nic=$(CURL GET "/1.0/me" | jq -r .nichandle)
+nic=$(ovhapirequest method='GET' query='/1.0/me' | jq -r .nichandle)
 if [ ! ${nic} ] || [ ${nic} == null ]; then
     echo -e "${RED}Unable to fetch your nichandle${NC}"
     if [ ! ${AK} ] || [ ! ${CK} ] || [ ! ${ENDPOINT} ] || [ ! ${AS} ]; then
@@ -98,7 +99,7 @@ then
 fi
 
 # Test if server exists
-srvid=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .serverId)
+srvid=$(ovhapirequest method='GET' query='/1.0/dedicated/server/${srv}' | jq -r .serverId)
 re='^[0-9]+$'
 if ! [[ ${srvid} =~ $re ]] ; then
     echo -e "${RED}Server does not exit${NC}"
@@ -106,11 +107,9 @@ if ! [[ ${srvid} =~ $re ]] ; then
     exit 1
 fi
 
-requestIPMIAccess
+#-----------------main--------------
 
-getIPMIAccessUrl
-
-srvpowerstate=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .powerState)
+srvpowerstate=$(ovhapirequest method='GET' query='/1.0/dedicated/server/${srv}' | jq -r .powerState)
 echo -e "${GREEN}Server ${srv} is actually ${srvpowerstate}${NC}"
 if [ "${srvpowerstate}" = "poweroff" ]
 then
@@ -119,20 +118,23 @@ then
 fi
 echo -e "${RED}WARNING Server ${srv} will be shutdown, CTRL+C to interrup the script${NC}"
 sleep 5
+requestIPMIAccess
+getIPMIAccessUrl 
+
 # Get bootId "power"
-bootid=$(CURL GET "/1.0/dedicated/server/${srv}/boot?bootType=power" | jq .[])
+bootid=$(ovhapirequest method='GET' query='/1.0/dedicated/server/${srv}/boot?bootType=power' | jq .[])
 echo -e "${GREEN}Power bootid is ${bootid}${NC}"
 # set "power" bootId
 echo -e "${GREEN}Setting IPXE bootId ${bootid} for server ${srv}${NC}"
-setshutdownbootid=$(CURL PUT "/1.0/dedicated/server/${srv}" "{\"bootId\": ${bootid}, \"monitoring\": false, \"noIntervention\": false}")
+setshutdownbootid=$(ovhapirequest method='PUT' query='/1.0/dedicated/server/${srv}' body='{\"bootId\":\"${bootid}\",\"monitoring\":false,\"noIntervention\":false}')
 echo -e "${GREEN}Rebooting server ${srv}${NC}"
-CURL POST "/1.0/dedicated/server/$srv/reboot" ""
-srvpowerstate=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .powerState)
+ovhapirequest method='POST' query='/1.0/dedicated/server/$srv/reboot'
+srvpowerstate=$(ovhapirequest method='GET' query='/1.0/dedicated/server/${srv}' | jq -r .powerState)
 while [ "${srvpowerstate}" != "poweroff" ]
 do
     echo -e "${BYellow}Waiting for server ${srv} to be shutdown, actual state : ${srvpowerstate}${NC}"
     sleep 10
-    srvpowerstate=$(CURL GET "/1.0/dedicated/server/${srv}" | jq -r .powerState)
+    srvpowerstate=$(ovhapirequest method='GET' query='/1.0/dedicated/server/${srv}' | jq -r .powerState)
 done
-echo -e "${GREEN}Server ${srv} is n state ${srvpowerstate}${NC}"
+echo -e "${GREEN}Server ${srv} is in state ${srvpowerstate}${NC}"
 exit 0

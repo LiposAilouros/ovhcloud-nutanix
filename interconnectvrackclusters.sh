@@ -235,6 +235,23 @@ attachIplbToVrack () {
     GETVRACKTASKSTATUS "${vracktaskid}"
 }
 
+getIplbPrivateNetworkNatip () {
+    eval ${@}
+    #CURLOVHAPI GET "/1.0/ipLoadbalancing/${iplb}/vrack/network" | jq -r '.[]'
+    iplbcallid=$(CURLOVHAPI GET "/1.0/ipLoadbalancing/${iplb}/vrack/network" | jq -r '.[]' )
+    #CURLOVHAPI GET "/1.0/ipLoadbalancing/${iplb}/vrack/network/$iplbcallid" | jq -r '.[]'
+    if [ "${iplbcallid}" ]; then
+        natip=$(CURLOVHAPI GET "/1.0/ipLoadbalancing/${iplb}/vrack/network/$iplbcallid" | jq -r '.natIp')
+        natipbase=$(ipcalc -b ${natip} | grep Address | /usr/bin/grep -oE '[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.')
+        natipbroadcastlastdigit=$(ipcalc -b ${natip} | grep Broadcast | /usr/bin/grep -oE '[0-9]{1,3}' | tail -n 1)
+        natip="${natipbase}$((natipbroadcastlastdigit + 1))/27"
+    else
+        natipbase=$(echo "${gatewayCidr}" | /usr/bin/grep -oE '[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.' | head -n 1)
+        natip="${natipbase}128/27"
+    fi
+    #echo $natip
+}
+
 setupIplbPrivateNetwork () {
     eval ${@}
     #echo -e "${BLUE}####function: setupIplbConfigurationWithVrack####${NC}"
@@ -465,13 +482,12 @@ attachIpfoToVrack ipfo="${ipfosource}" vrack="${vrackdestination}"
 echo -e "${GREEN}Modifying the source Load Balancer${NC}"
 cleanIplbPrivateNetwork iplb="${iplbsource}"
 attachIplbToVrack vrack="${vrackdestination}" iplb="${iplbsource}"
-# TODO : get natip
-setupIplbPrivateNetwork iplb="${iplbsource}" vlan=${vlansource} subnet=${subnet} natip="172.16.1.128/27"
+getIplbPrivateNetworkNatip iplb="${iplbdestination}"
+setupIplbPrivateNetwork iplb="${iplbsource}" vlan=${vlansource} subnet=${subnet} natip="${natip}"
 
-echo -e "${GREEN}Done\n${NC}"
-echo -e "${RED}Don't forget to change one of Data Service Ip in prism element${NC}"
+echo -e "${GREEN}Setup Done\n${NC}"
+echo -e "${RED}Don't forget to change one of Data Service Ip in prism element\n${NC}"
 echo -e "${GREEN}In some case, You'll need to restart both Prismcentral, check with LCM, if it's doesn't work => restart${NC}"
-echo -e "${GREEN}Done${NC}"
 exit
 
 # Leap 

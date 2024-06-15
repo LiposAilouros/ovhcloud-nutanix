@@ -1,0 +1,45 @@
+#cloud-config
+hostname: bastion-ssh
+fqdn: bastion-ssh.domain.local
+users:
+  - name: bastion
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: sudo
+    shell: /bin/ash
+    ssh_pwauth: true
+    lock_passwd: false
+    plain_text_passwd: MyS3cur3P@55W0rd!4me
+
+growpart:
+  mode: growpart
+  devices: ["/dev/sda2"]
+  ignore_growroot_disabled: true
+
+write_files:
+   - path: /etc/network/interfaces
+     content: |
+        auto lo
+        iface lo inet loopback
+
+        auto eth0
+        iface eth0 inet static
+        address 172.16.0.242
+        netmask 255.255.252.0
+        gateway 172.16.0.254
+
+runcmd:
+   - echo "nameserver 213.186.33.99" > /etc/resolv.conf
+   - rc-service networking restart
+   - apk update
+   - apk upgrade
+   - apk add sudo openssh-server-pam git jq ipcalc vim perl-utils bash
+   - sed -i s/'PasswordAuthentication no'/'PasswordAuthentication yes'/g /etc/ssh/sshd_config
+   - sed -i s/'#KbdInteractiveAuthentication yes'/'KbdInteractiveAuthentication yes'/g /etc/ssh/sshd_config
+   - sed -i s/'#UsePAM no'/'UsePAM yes'/g /etc/ssh/sshd_config
+   - rc-service sshd restart
+   - lvextend -l +100%FREE /dev/vg0/lv_root
+   - resize2fs /dev/vg0/lv_root
+   - reboot
+   - rc-update del cloud-init
+
+final_message: "The system is finally up, after $UPTIME seconds"

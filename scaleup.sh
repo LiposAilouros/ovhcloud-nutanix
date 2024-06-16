@@ -56,11 +56,11 @@ if [ ! ${nic} ] || [ ${nic} == null ]; then
 fi
 
 # Test if parameter is present
-cluster=${1}
+eval $@
 if [ ! ${cluster} ]
 then
     echo -e "${RED} cluster parameter is missing${NC}"
-    echo -e "${RED} Usage : script.sh "cluster name"${NC}"
+    echo -e "${RED} Usage : $0 cluster='"'cluster name'"' cvmIp='"''"' ahvIp='"''"' version='"''"'${NC}"
     exit 1
 fi
 
@@ -68,11 +68,6 @@ fi
 #           check if there is one or more server to scale up 
 #           checks ips and get ips in ip pools
 #           check cluster state if "Deploying state exit
-
-
-cvmIp="172.16.1.40"
-ahvIp="172.16.0.40"
-version="6.5"
 
 # check if there is a node unconfigured ie : cvmIp = 0.0.0.0
 unconfiguredcvmnumber=$(CURL GET "/1.0/nutanix/${cluster}" | jq -r '.targetSpec.nodes[]'.cvmIp | grep 0.0.0.0 | wc -l)

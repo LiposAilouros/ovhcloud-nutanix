@@ -81,6 +81,10 @@ For now you can only scale up one node. If you have more than one node and you w
 
 Multi scale up is allowed on OVHcloud side but not implemented.
 
+```bash
+./scaleup.sh cluster='cluster name' cvmIp='' ahvIp='' version=''
+```
+
 ## Interconnect clusters
 
 This script interconnect two Nutanix clusters Provided by OVHcloud across the same vRack.
